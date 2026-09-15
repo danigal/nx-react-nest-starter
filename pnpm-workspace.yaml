@@ -1,3 +1,13 @@
 autoInstallPeers: true
 allowBuilds:
+  '@parcel/watcher': true
+  less: true
   nx: true
+  unrs-resolver: true
+  '@swc/core': false
+  esbuild: false
+  '@nestjs/core': false
+  '@scarf/scarf': false
+  cpu-features: false
+  protobufjs: false
+  ssh2: false

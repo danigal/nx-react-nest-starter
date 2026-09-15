@@ -1,0 +1,22 @@
+name: nx-react-nest-starter-e2e
+
+services:
+  postgres-e2e:
+    image: pgvector/pgvector:0.8.6-pg18-bookworm
+    environment:
+      POSTGRES_DB: nx_react_nest_e2e
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+    ports:
+      - '55432:5432'
+    volumes:
+      - postgres-e2e:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d nx_react_nest_e2e']
+      interval: 2s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+volumes:
+  postgres-e2e:

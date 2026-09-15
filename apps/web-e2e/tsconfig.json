@@ -1,0 +1,21 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "declaration": true,
+    "allowJs": true,
+    "outDir": "../../dist/out-tsc",
+    "sourceMap": false,
+    "module": "esnext"
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.js",
+    "playwright.config.mts",
+    "src/**/*.spec.ts",
+    "src/**/*.spec.js",
+    "src/**/*.test.ts",
+    "src/**/*.test.js",
+    "src/**/*.d.ts"
+  ]
+}

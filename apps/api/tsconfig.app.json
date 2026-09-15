@@ -1,0 +1,45 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "declaration": true,
+    "outDir": "../../dist/out-tsc",
+    "module": "commonjs",
+    "types": ["node"],
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "target": "es2021",
+    "moduleResolution": "node",
+    "paths": {
+      "@nx-react-nest-starter/api-application": [
+        "../../libs/api/application/src/index.ts"
+      ],
+      "@nx-react-nest-starter/api-database": [
+        "../../libs/api/database/src/index.ts"
+      ],
+      "@nx-react-nest-starter/shared-contracts": [
+        "../../libs/shared/contracts/src/index.ts"
+      ]
+    },
+    "strictNullChecks": true,
+    "noImplicitAny": true,
+    "strictBindCallApply": true,
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": [
+    "jest.config.ts",
+    "jest.config.cts",
+    "src/**/*.spec.ts",
+    "src/**/*.test.ts"
+  ],
+  "references": [
+    {
+      "path": "../../libs/api/database/tsconfig.lib.json"
+    },
+    {
+      "path": "../../libs/api/application/tsconfig.lib.json"
+    }
+  ]
+}

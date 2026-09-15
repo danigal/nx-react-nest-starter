@@ -1,96 +1,71 @@
-# NxReactNestStarter
+# Nx React + Nest starter
 
-<a alt="Nx logo" href="https://nx.dev" target="_blank" rel="noreferrer"><img src="https://raw.githubusercontent.com/nrwl/nx/master/images/nx-logo.png" width="45"></a>
+A strict Nx monorepo with a static React client, a Fastify-powered Nest API, PostgreSQL with pgvector, checked-in Drizzle migrations, and shared Zod runtime contracts.
 
-✨ Your new, shiny [Nx workspace](https://nx.dev) is ready ✨.
+## Prerequisites
 
-[Learn more about this workspace setup and its capabilities](https://nx.dev/getting-started/intro#learn-nx?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects) or run `npx nx graph` to visually explore what was created. Now, let's get you up to speed!
+- Node.js 24.20.0 (the supported policy is `>=24.15.0 <25`)
+- Corepack
+- Docker Engine or a compatible container runtime
 
-## Run tasks
-
-To run tasks with Nx use:
-
-```sh
-npx nx <target> <project-name>
+```bash
+corepack enable
+corepack prepare pnpm@11.24.0 --activate
+pnpm install --frozen-lockfile
 ```
 
-For example:
+## First run
 
-```sh
-npx nx build myproject
+```bash
+pnpm dev:setup
+pnpm dev
 ```
 
-These targets are either [inferred automatically](https://nx.dev/concepts/inferred-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) or defined in the `project.json` or `package.json` files.
+Open the web app at <http://localhost:4200>. The API is at <http://localhost:3000/api>; Swagger UI is at <http://localhost:3000/api/docs> in local development. Vite proxies `/api` to the API so browser code always uses a same-origin URL.
 
-[More about running tasks in the docs &raquo;](https://nx.dev/features/run-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+Configuration may be supplied through the environment or `apps/api/.env`; see `apps/api/.env.example`. `DATABASE_URL` is used by the API. `MIGRATION_DATABASE_URL` may separately restrict migration credentials and falls back to `DATABASE_URL` locally.
 
-## Add new projects
+## Database and contracts
 
-While you could add new projects to your workspace manually, you might want to leverage [Nx plugins](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) and their [code generation](https://nx.dev/features/generate-code?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) feature.
+```bash
+pnpm migration:generate  # create a migration to review and commit
+pnpm migration:check     # fail if the Drizzle schema and migrations drift
+pnpm migrate             # apply committed migrations
+pnpm db:down             # stop PostgreSQL; retain its data
+pnpm db:reset            # WARNING: delete this repo's local DB volume, recreate, migrate
 
-To install a new plugin you can use the `nx add` command. Here's an example of adding the React plugin:
-```sh
-npx nx add @nx/react
+pnpm contracts:generate  # OpenAPI JSON, then browser TypeScript declarations
+pnpm contracts:check     # regenerate and fail if committed output drifts
+pnpm routes:check        # regenerate the TanStack route tree and check drift
 ```
 
-Use the plugin's generator to create new projects. For example, to create a new React app or library:
+Shared Zod schemas are the payload source of truth. OpenAPI is generated from API decorators backed by those schemas; browser declarations come from committed OpenAPI. Endpoint wrappers still parse network responses at runtime.
 
-```sh
-# Generate an app
-npx nx g @nx/react:app demo
+## Quality and tests
 
-# Generate a library
-npx nx g @nx/react:lib some-lib
+```bash
+pnpm format:check
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm e2e:api
+pnpm e2e:web
+pnpm build
+pnpm ci
 ```
 
-You can use `npx nx list` to get a list of installed plugins. Then, run `npx nx list <plugin-name>` to learn about more specific capabilities of a particular plugin. Alternatively, [install Nx Console](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) to browse plugins and generators in your IDE.
+The API E2E suite uses Testcontainers. With a Podman-backed Docker endpoint that cannot start Ryuk, use `TESTCONTAINERS_RYUK_DISABLED=true pnpm e2e:api`; the suite still performs explicit cleanup. Browser E2E owns a dedicated Compose database and volume and removes them on exit.
 
-[Learn more about Nx plugins &raquo;](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) | [Browse the plugin registry &raquo;](https://nx.dev/plugin-registry?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+## Production artifacts
 
-## Set up CI!
+- `pnpm nx build web` creates static files in `dist/apps/web`. The static host must serve `index.html` as the fallback for client routes, while the edge routes `/api` before that fallback.
+- `pnpm nx build api` creates the server bundle in `dist/apps/api`.
+- `pnpm image:smoke` builds `Dockerfile.api`, runs its one-shot `node migrate.js` command, and verifies liveness. The image runs as the non-root `node` user.
 
-### Step 1
+A deployment platform must inject secrets, serialize the migration job, run it before rollout, wire readiness/liveness probes, and configure same-origin static/API routing. Those platform policies are intentionally not faked in provider-neutral files.
 
-To connect to Nx Cloud, run the following command:
+## Intentional non-goals
 
-```sh
-npx nx connect
-```
+This starter contains no sample business domain, authentication policy, logging/telemetry stack, deployment hooks, or generated duplicate runtime schemas. Add those where the product and platform requirements are known.
 
-Connecting to Nx Cloud ensures a [fast and scalable CI](https://nx.dev/ci/intro/why-nx-cloud?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) pipeline. It includes features such as:
-
-- [Remote caching](https://nx.dev/ci/features/remote-cache?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task distribution across multiple machines](https://nx.dev/ci/features/distribute-task-execution?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Automated e2e test splitting](https://nx.dev/ci/features/split-e2e-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task flakiness detection and rerunning](https://nx.dev/ci/features/flaky-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-### Step 2
-
-Use the following command to configure a CI workflow for your workspace:
-
-```sh
-npx nx g ci-workflow
-```
-
-[Learn more about Nx on CI](https://nx.dev/ci/intro/ci-with-nx#ready-get-started-with-your-provider?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Install Nx Console
-
-Nx Console is an editor extension that enriches your developer experience. It lets you run tasks, generate code, and improves code autocompletion in your IDE. It is available for VSCode and IntelliJ.
-
-[Install Nx Console &raquo;](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Useful links
-
-Learn more:
-
-- [Learn more about this workspace setup](https://nx.dev/getting-started/intro#learn-nx?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects)
-- [Learn about Nx on CI](https://nx.dev/ci/intro/ci-with-nx?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Releasing Packages with Nx release](https://nx.dev/features/manage-releases?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [What are Nx plugins?](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-And join the Nx community:
-- [Discord](https://go.nx.dev/community)
-- [Follow us on X](https://twitter.com/nxdevtools) or [LinkedIn](https://www.linkedin.com/company/nrwl)
-- [Our Youtube channel](https://www.youtube.com/@nxdevtools)
-- [Our blog](https://nx.dev/blog?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+See [the architecture notes](docs/architecture.md) and [the detailed build guide](nx-react-nest-starter-build-guide.md).

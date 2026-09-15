@@ -1,0 +1,8 @@
+# Add files here to ignore them from prettier formatting
+/dist
+/coverage
+/.nx/cache
+/.nx/workspace-data
+/apps/web/src/routeTree.gen.ts
+/apps/api/openapi/openapi.json
+/apps/web/src/generated/api.d.ts

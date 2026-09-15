@@ -1,0 +1,23 @@
+name: nx-react-nest-starter
+
+services:
+  postgres:
+    image: pgvector/pgvector:0.8.6-pg18-bookworm
+    environment:
+      POSTGRES_DB: nx_react_nest
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+    ports:
+      - '5432:5432'
+    volumes:
+      - nx-react-nest-postgres:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d nx_react_nest']
+      interval: 2s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+volumes:
+  nx-react-nest-postgres:
+    name: nx-react-nest-starter-postgres

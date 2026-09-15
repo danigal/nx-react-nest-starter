@@ -1,0 +1,124 @@
+{
+  "name": "api",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/api/src",
+  "projectType": "application",
+  "tags": ["scope:api", "type:app", "platform:node"],
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "webpack-cli build",
+        "env": {
+          "NODE_ENV": "production"
+        },
+        "cwd": "apps/api"
+      },
+      "configurations": {
+        "development": {
+          "env": {
+            "NODE_ENV": "development"
+          }
+        }
+      }
+    },
+    "prune-lockfile": {
+      "dependsOn": ["build"],
+      "cache": true,
+      "executor": "@nx/js:prune-lockfile",
+      "outputs": [
+        "{workspaceRoot}/dist/apps/api/package.json",
+        "{workspaceRoot}/dist/apps/api/pnpm-lock.yaml"
+      ],
+      "options": {
+        "buildTarget": "build"
+      }
+    },
+    "copy-workspace-modules": {
+      "dependsOn": ["build"],
+      "cache": true,
+      "outputs": ["{workspaceRoot}/dist/apps/api/workspace_modules"],
+      "executor": "@nx/js:copy-workspace-modules",
+      "options": {
+        "buildTarget": "build"
+      }
+    },
+    "prune": {
+      "dependsOn": ["prune-lockfile", "copy-workspace-modules"],
+      "executor": "nx:noop"
+    },
+    "serve": {
+      "continuous": true,
+      "executor": "@nx/js:node",
+      "defaultConfiguration": "development",
+      "dependsOn": ["build"],
+      "options": {
+        "buildTarget": "api:build",
+        "runBuildTargetDependencies": false
+      },
+      "configurations": {
+        "development": {
+          "buildTarget": "api:build:development"
+        },
+        "production": {
+          "buildTarget": "api:build:production"
+        }
+      }
+    },
+    "test": {
+      "options": {
+        "passWithNoTests": true
+      }
+    },
+    "migrate": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "command": "ts-node -r tsconfig-paths/register apps/api/src/migrate.ts",
+        "env": {
+          "TS_NODE_PROJECT": "apps/api/tsconfig.app.json"
+        }
+      }
+    },
+    "migration-check": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "command": "tools/scripts/migration-check.sh"
+      }
+    },
+    "migration-generate": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "command": "drizzle-kit generate --config apps/api/drizzle.config.ts"
+      }
+    },
+    "migration-build": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["build"],
+      "cache": true,
+      "outputs": ["{workspaceRoot}/dist/apps/api-migrate"],
+      "options": {
+        "command": "esbuild apps/api/src/migrate.ts --bundle --platform=node --format=cjs --packages=external --tsconfig=tsconfig.base.json --outfile=dist/apps/api-migrate/migrate.js --sourcemap"
+      }
+    },
+    "openapi-generate": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "command": "ts-node -r tsconfig-paths/register apps/api/src/generate-openapi.ts",
+        "env": {
+          "TS_NODE_PROJECT": "apps/api/tsconfig.app.json"
+        }
+      }
+    },
+    "contracts-check": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "command": "tools/scripts/contracts-check.sh"
+      }
+    }
+  }
+}

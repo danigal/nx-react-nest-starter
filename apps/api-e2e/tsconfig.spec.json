@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "declaration": true,
+    "outDir": "../../dist/out-tsc",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "types": ["jest", "node"]
+  },
+  "references": [
+    { "path": "../../libs/api/application/tsconfig.lib.json" },
+    { "path": "../../libs/api/database/tsconfig.lib.json" }
+  ],
+  "include": ["jest.config.ts", "jest.config.cjs", "src/**/*.ts"]
+}

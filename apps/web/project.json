@@ -1,0 +1,23 @@
+{
+  "name": "web",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/web/src",
+  "projectType": "application",
+  "tags": ["scope:web", "type:app", "platform:browser"],
+  "targets": {
+    "client-generate": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "command": "openapi-typescript apps/api/openapi/openapi.json -o apps/web/src/generated/api.d.ts"
+      }
+    },
+    "routes-check": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "command": "tools/scripts/routes-check.sh"
+      }
+    }
+  }
+}
