@@ -26,6 +26,7 @@ module.exports = {
       optimization: false,
       outputHashing: 'none',
       generatePackageJson: true,
+      runtimeDependencies: ['@fastify/static'],
       sourceMap: true,
     }),
   ],

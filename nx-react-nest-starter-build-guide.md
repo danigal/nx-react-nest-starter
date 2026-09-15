@@ -237,7 +237,7 @@ Install the application stack from current stable, mutually compatible release l
 
 ```bash
 pnpm add -w @tanstack/react-query @tanstack/react-router openapi-fetch
-pnpm add -w @nestjs/platform-fastify @nestjs/swagger zod nestjs-zod
+pnpm add -w @nestjs/platform-fastify @nestjs/swagger @fastify/static zod nestjs-zod
 pnpm add -w drizzle-orm postgres tslib
 pnpm add -Dw @tanstack/router-plugin tailwindcss @tailwindcss/vite esbuild
 pnpm add -Dw openapi-typescript drizzle-kit @testcontainers/postgresql
@@ -245,7 +245,7 @@ pnpm add -Dw openapi-typescript drizzle-kit @testcontainers/postgresql
 
 Use `--save-exact` (or pnpm's `-E`) for the application stack so `package.json`, not only the current lockfile, records the reviewed versions. After switching Nest to Fastify and replacing the generated HTTP E2E scaffold with Fastify injection, remove the unused `@nestjs/platform-express` and `axios` dependencies.
 
-Run `pnpm peers check` after installation. At the time of this implementation, the generator selected TypeScript 6 while `openapi-typescript` 7 still declared TypeScript 5 support; pinning TypeScript 5.9.x avoids carrying an unsupported peer combination.
+Run `pnpm peers check` after installation. At the time of this implementation, the generator selected TypeScript 6 while `openapi-typescript` 7 still declared TypeScript 5 support; pinning TypeScript 5.9.x avoids carrying an unsupported peer combination. Optional peers that the running process actually loads still need an explicit production pin; `pnpm peers check` does not fail when they are absent.
 
 Run Nest-decorated generation entrypoints with `ts-node` using `apps/api/tsconfig.app.json` (and `tsconfig-paths/register` for workspace aliases). `tsx` uses an esbuild decorator transform that is incompatible with the legacy decorator metadata expected by Nest/Swagger 11 in this setup.
 
@@ -299,6 +299,7 @@ This is the implementation record from 2–3 September 2026. Keep it because it 
 | Local quality commands in the managed workspace    | pnpm/Nx reported `unable to open database file`                                                    | Nx's user-level cache database was outside the restricted workspace sandbox                                                                          | Grant the command access to the user cache or set an allowed cache location. This is an execution-environment workaround, not a repository requirement.                              |
 | Framework baseline changed mid-build               | Nest 12 became current after Nest 11 had been generated and integrated                             | Framework release timing invalidated “current stable” as a timeless instruction                                                                      | Freeze the verified Nest 11 result, add the explicit Nest 12 decision gate above, and require a compatibility spike rather than silently changing majors.                            |
 | Guide source reference                             | The original guide named a companion research note that was not present in the repository          | A planning-time artifact path was treated as if it were committed                                                                                    | Keep evidence notes under `docs/research/`, verify links in a clean checkout, and link only committed artifacts.                                                                     |
+| Local `pnpm run dev`                               | API exited; Vite proxied `/api/health/ready` to `ECONNREFUSED :3000`                               | Nest Swagger on Fastify `useStaticAssets()` `loadPackage()`s optional `@fastify/static` and `process.exit(1)`s when it is missing; development defaults docs on; generation and E2E kept docs off | Pin `@fastify/static` as an exact production dependency on the platform-fastify peer major, list it in webpack `runtimeDependencies`, and factory-test the docs-enabled boot path. |
 
 ### Edits made after generation
 
@@ -328,7 +329,7 @@ On a second implementation I would:
 5. Pin a compatibility matrix before installing application packages and run peer/build-policy checks immediately. Never use “latest” independently for coupled Nest packages.
 6. Add root solution TypeScript configuration and normalize module/reference settings before generating libraries' implementation code.
 7. Configure the app-local web manifest, aliases, Tailwind, and shadcn files manually for integrated Nx, using the shadcn CLI only to add owned components.
-8. Build OpenAPI generation, migrations, and image entrypoints as first-class Nx targets with direct tool dependencies from the start. Test them once with caches disabled and once inside the production image.
+8. Build OpenAPI generation, migrations, and image entrypoints as first-class Nx targets with direct tool dependencies from the start. Test them once with caches disabled and once inside the production image. Prove the docs-enabled factory path; generation and E2E that disable docs do not.
 9. Introduce real API E2E before browser E2E, then reuse a single documented orchestration pattern with unique ports, named resources, and traps.
 10. Keep `api-application`, `api-database`, and browser-safe contracts as the initial deep seams. Do not add more projects until a real feature demonstrates independent ownership or dependency pressure.
 
@@ -482,7 +483,7 @@ The browser client uses OpenAPI-generated path types for request correctness and
 
 Because OpenAPI paths include `/api`, let `openapi-fetch` use same-origin paths directly; do not introduce a `VITE_API_URL` in the initial starter.
 
-Serve Swagger UI at `/api/docs` and JSON at `/api/openapi.json` only when validated `API_DOCS_ENABLED` is true. Default it to true outside production and false in production; production may explicitly opt in. The committed OpenAPI document remains the review and client-generation artifact regardless of runtime docs exposure.
+Serve Swagger UI at `/api/docs` and JSON at `/api/openapi.json` only when validated `API_DOCS_ENABLED` is true. Default it to true outside production and false in production; production may explicitly opt in. Fastify Swagger UI calls `useStaticAssets()`, so pin `@fastify/static` as a production dependency on the same major as `@nestjs/platform-fastify`'s peer (`10.1.x` in this matrix). Nest `loadPackage()` exits the process when it is missing. OpenAPI generation and HTTP E2E may keep docs off; the application-factory suite must boot with docs enabled and assert `/api/docs/` and `/api/openapi.json`. The committed OpenAPI document remains the review and client-generation artifact regardless of runtime docs exposure.
 
 ## 10. API application
 
@@ -640,13 +641,14 @@ These tests may mock the web client boundary. Do not mock TanStack Query itself.
 
 ### API unit tests — Jest
 
-Unit-test policy and mapping without a real server/database:
+Unit-test policy and mapping without listening or a real database:
 
 - liveness service/controller behavior;
 - readiness success/failure mapping through a mocked database readiness port;
 - Problem Details conversion and redaction;
 - environment parsing;
-- application-level schema serialization failures.
+- application-level schema serialization failures;
+- application factory with docs enabled serves Swagger UI and `/api/openapi.json`.
 
 ### API E2E — Jest, Fastify `inject()`, Testcontainers
 
@@ -696,6 +698,8 @@ Declare every build executable used by a repository target as a direct, pinned d
 pnpm 11 stores dependency build-script decisions in `pnpm-workspace.yaml`, not in the lockfile. Copy the reviewed workspace policy alongside the pruned `package.json` and lockfile before the runtime-stage `pnpm install --prod --frozen-lockfile`; omitting it makes a clean image install fail on an already reviewed transitive build script.
 
 Keep emitted runtime helpers such as `tslib` in `dependencies`, not `devDependencies`. Nx's pruned production manifest follows the declared dependency class, so a helper available during compilation can otherwise be absent when the compiled server starts in the runtime image.
+
+Nx `generatePackageJson` traces the compilation graph and misses packages Nest loads through `loadPackage()`. List those runtime peers in the API webpack plugin's `runtimeDependencies` so the pruned image manifest still contains them when production opts into docs. This matrix lists `@fastify/static`.
 
 Enable Nest shutdown hooks and close the database pool during termination. Validate both normal API startup and the migration entrypoint in container smoke tests.
 
@@ -799,7 +803,7 @@ Implement in this order so each stage leaves a verifiable repository:
 The starter is complete only when all of the following are true:
 
 - a fresh clone can activate the pinned pnpm version and install with a frozen lockfile;
-- `dev:setup` plus `dev` produces a working same-origin local system;
+- `dev:setup` plus `dev` produces a working same-origin local system, including `/api/docs` and `/api/openapi.json` when docs default on;
 - `/api/health/live` succeeds without PostgreSQL;
 - `/api/health/ready` succeeds with migrated PostgreSQL and returns safe `503` Problem Details without it;
 - PostgreSQL reports the `vector` extension enabled;

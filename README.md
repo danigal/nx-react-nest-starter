@@ -17,9 +17,12 @@ pnpm install --frozen-lockfile
 ## First run
 
 ```bash
+cp apps/api/.env.example apps/api/.env
 pnpm dev:setup
 pnpm dev
 ```
+
+Keep `pnpm dev` running in its own terminal. `dev:setup` starts the local PostgreSQL/pgvector container and applies the checked-in migration. If you skip either step, the web shell will show the API as unavailable (or the API process will fail its required `DATABASE_URL` configuration).
 
 Open the web app at <http://localhost:4200>. The API is at <http://localhost:3000/api>; Swagger UI is at <http://localhost:3000/api/docs> in local development. Vite proxies `/api` to the API so browser code always uses a same-origin URL.
 
